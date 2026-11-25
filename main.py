@@ -35,6 +35,25 @@ def output_dir() -> str:
     return "out"
 
 
+def verify(path, data) -> bool:
+    """Read the written file back and prove it is exactly the verified bytes."""
+    with open(path, "rb") as f:
+        on_disk = f.read()
+    if on_disk != data:
+        print("mismatch: bytes on disk differ from the verified bytes",
+              file=sys.stderr)
+        return False
+    if len(on_disk) != EXPECTED_BYTES:
+        print(f"mismatch: wrote {len(on_disk)} bytes, expected {EXPECTED_BYTES}",
+              file=sys.stderr)
+        return False
+    if hashlib.sha256(on_disk).hexdigest() != EXPECTED_SHA256:
+        print("mismatch: sha256 of the written file does not match the pin",
+              file=sys.stderr)
+        return False
+    return True
+
+
 def main() -> int:
     data = LINE.encode("utf-8")
     if len(LINE) != EXPECTED_CHARS:
@@ -62,6 +81,8 @@ def main() -> int:
     path = os.path.join(out_dir, "entry.txt")
     with open(path, "wb") as f:
         f.write(data)
+    if not verify(path, data):
+        raise SystemExit("verification failed: written file does not match")
     print(f"wrote {path} ({len(data)} bytes, sha256 {digest})")
     return 0
 
